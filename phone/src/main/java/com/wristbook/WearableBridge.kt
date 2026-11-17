@@ -14,8 +14,19 @@ class WearableBridge(context: Context) {
     @Volatile private var connectedNode: Node? = null
 
     fun connect(onStatus: (String) -> Unit) {
+        val completed = AtomicBoolean(false)
+        val handler = Handler(Looper.getMainLooper())
+        val timeout = Runnable {
+            if (completed.compareAndSet(false, true)) {
+                onStatus("Проверка часов заняла больше 12 секунд. Проверь Mi Fitness и Bluetooth.")
+            }
+        }
+        handler.postDelayed(timeout, 12_000)
+
         Wearable.getNodeApi(appContext).connectedNodes
             .addOnSuccessListener { nodes ->
+                if (!completed.compareAndSet(false, true)) return@addOnSuccessListener
+                handler.removeCallbacks(timeout)
                 val node = nodes.firstOrNull()
                 if (node == null) {
                     connectedNode = null
@@ -26,6 +37,8 @@ class WearableBridge(context: Context) {
                 }
             }
             .addOnFailureListener { error ->
+                if (!completed.compareAndSet(false, true)) return@addOnFailureListener
+                handler.removeCallbacks(timeout)
                 connectedNode = null
                 onStatus("Ошибка связи: ${error.message ?: "неизвестно"}")
             }
