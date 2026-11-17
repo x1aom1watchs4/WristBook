@@ -1,6 +1,9 @@
 package com.wristbook
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.atomic.AtomicBoolean
 import com.xiaomi.xms.wearable.Wearable
 import com.xiaomi.xms.wearable.node.Node
 import org.json.JSONObject
@@ -29,11 +32,28 @@ class WearableBridge(context: Context) {
     }
 
     fun sendBook(name: String, text: String, onStatus: (String) -> Unit) {
-        // Always refresh the node list at send time. The startup lookup may still be
-        // running, or its cached node may have gone stale while the app was open.
+        // Reuse the node discovered when the app opened instead of querying it again.
+        val knownNode = connectedNode
+        if (knownNode != null) {
+            onStatus("Часы подключены: ${knownNode.name}. Отправляем книгу…")
+            transferBook(knownNode, name, text, onStatus)
+            return
+        }
+
         onStatus("Проверяем подключение к часам…")
+        val completed = AtomicBoolean(false)
+        val handler = Handler(Looper.getMainLooper())
+        val timeout = Runnable {
+            if (completed.compareAndSet(false, true)) {
+                onStatus("Часы не ответили на проверку за 12 секунд. Проверь Mi Fitness и попробуй ещё раз.")
+            }
+        }
+        handler.postDelayed(timeout, 12_000)
+
         Wearable.getNodeApi(appContext).connectedNodes
             .addOnSuccessListener { nodes ->
+                if (!completed.compareAndSet(false, true)) return@addOnSuccessListener
+                handler.removeCallbacks(timeout)
                 val node = nodes.firstOrNull()
                 if (node == null) {
                     connectedNode = null
@@ -45,6 +65,8 @@ class WearableBridge(context: Context) {
                 }
             }
             .addOnFailureListener { error ->
+                if (!completed.compareAndSet(false, true)) return@addOnFailureListener
+                handler.removeCallbacks(timeout)
                 connectedNode = null
                 onStatus("Не удалось проверить подключение: ${error.message ?: "неизвестная ошибка"}")
             }
