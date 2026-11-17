@@ -1,16 +1,14 @@
 {
-  "package": "com.wristbook.watch",
+  "package": "com.wristbook",
   "name": "WristBook",
-  "versionName": "0.1.4",
-  "versionCode": 5,
+  "versionName": "0.2.0",
+  "versionCode": 6,
   "minPlatformVersion": 1000,
-  "deviceTypeList": [
-    "watch"
-  ],
+  "deviceTypeList": ["watch"],
   "features": [
-    {
-      "name": "system.router"
-    }
+    { "name": "system.router" },
+    { "name": "system.interconnect" },
+    { "name": "system.file" }
   ],
   "config": {
     "logLevel": "info",
@@ -19,9 +17,7 @@
   "router": {
     "entry": "pages/index",
     "pages": {
-      "pages/index": {
-        "component": "index"
-      }
+      "pages/index": { "component": "index" }
     }
   },
   "icon": "/common/wristbook-icon.png"
