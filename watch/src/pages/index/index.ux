@@ -1,11 +1,107 @@
 <template>
   <div class="page">
     <text class="title">WristBook</text>
-    <text class="subtitle">Чтение на часах</text>
-    <text class="hint">Версия 0.1.0</text>
-    <text class="hint">Проект часов успешно запущен</text>
+    <text class="status">{{status}}</text>
+    <text class="book-title">{{bookTitle}}</text>
+    <text class="content">{{preview}}</text>
+    <input type="button" class="button" value="Проверить связь" @click="checkConnection" />
+    <text class="hint">Отправь TXT-книгу из приложения на телефоне</text>
   </div>
 </template>
+
+<script>
+  import interconnect from '@system.interconnect'
+  import file from '@system.file'
+
+  let connection = null
+
+  export default {
+    private: {
+      status: 'Подключение...',
+      bookTitle: 'Книг пока нет',
+      preview: '',
+      receivedText: '',
+      expectedChunks: 0,
+      chunks: [],
+      received: 0
+    },
+
+    onInit() {
+      this.bindConnection()
+    },
+
+    bindConnection() {
+      connection = interconnect.instance()
+      connection.onopen = () => {
+        this.status = 'Телефон подключён'
+      }
+      connection.onclose = () => {
+        this.status = 'Связь прервана'
+      }
+      connection.onerror = (error) => {
+        this.status = 'Ошибка связи: ' + error.code
+      }
+      connection.onmessage = (event) => {
+        this.handleMessage(event && event.data ? event.data : '')
+      }
+      this.checkConnection()
+    },
+
+    checkConnection() {
+      if (!connection) connection = interconnect.instance()
+      connection.diagnosis({
+        timeout: 10000,
+        success: (result) => {
+          this.status = result.status === 0 ? 'Телефон подключён' : 'Телефон не найден (' + result.status + ')'
+        },
+        fail: () => {
+          this.status = 'Не удалось проверить связь'
+        }
+      })
+    },
+
+    handleMessage(raw) {
+      let message
+      try {
+        message = typeof raw === 'string' ? JSON.parse(raw) : raw
+      } catch (error) {
+        this.status = 'Получено неизвестное сообщение'
+        return
+      }
+      if (!message || !message.type) return
+
+      if (message.type === 'book_start') {
+        this.bookTitle = message.name || 'Новая книга'
+        this.expectedChunks = message.totalChunks || 0
+        this.chunks = []
+        this.received = 0
+        this.receivedText = ''
+        this.preview = ''
+        this.status = 'Получаю книгу...'
+      } else if (message.type === 'book_chunk') {
+        this.chunks[message.index] = message.text || ''
+        this.received++
+        this.status = 'Получено частей: ' + this.received + '/' + this.expectedChunks
+      } else if (message.type === 'book_end') {
+        this.receivedText = this.chunks.join('')
+        file.writeText({
+          uri: 'internal://files/wristbook-book.txt',
+          text: this.receivedText,
+          encoding: 'UTF-8',
+          success: () => {
+            this.preview = this.receivedText.slice(0, 700)
+            this.status = 'Книга сохранена на часах'
+          },
+          fail: (error, code) => {
+            this.status = 'Ошибка сохранения: ' + code
+          }
+        })
+      } else if (message.type === 'transfer_error') {
+        this.status = message.message || 'Ошибка передачи'
+      }
+    }
+  }
+</script>
 
 <style>
   .page {
@@ -14,26 +110,41 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    padding: 28px;
     background-color: #101820;
   }
   .title {
     color: #ffffff;
-    font-size: 38px;
+    font-size: 34px;
     font-weight: bold;
-    margin-bottom: 18px;
+    margin-bottom: 12px;
   }
-  .subtitle {
+  .status {
     color: #8ed6c5;
-    font-size: 25px;
-    margin-bottom: 18px;
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  .book-title {
+    color: #ffffff;
+    font-size: 21px;
+    margin-bottom: 8px;
+  }
+  .content {
+    color: #c7d0d8;
+    font-size: 16px;
+    max-lines: 5;
+    margin-bottom: 10px;
+  }
+  .button {
+    width: 240px;
+    height: 54px;
+    color: #101820;
+    background-color: #8ed6c5;
+    font-size: 18px;
   }
   .hint {
-    color: #c7d0d8;
-    font-size: 17px;
-    margin-top: 8px;
+    color: #9aa7b2;
+    font-size: 14px;
+    margin-top: 10px;
   }
 </style>
-
-<script>
-  export default {}
-</script>
