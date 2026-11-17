@@ -70,13 +70,18 @@ jobs:
           if-no-files-found: error
 
       - name: Configure persistent Vela signing certificate
-        if: ${{ secrets.VELA_PRIVATE_KEY != '' && secrets.VELA_CERTIFICATE != '' }}
+        id: signing
         working-directory: watch
         env:
           VELA_PRIVATE_KEY: ${{ secrets.VELA_PRIVATE_KEY }}
           VELA_CERTIFICATE: ${{ secrets.VELA_CERTIFICATE }}
         run: |
           set -euo pipefail
+          if [ -z "$VELA_PRIVATE_KEY" ] || [ -z "$VELA_CERTIFICATE" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Release signing secrets are not configured; skipping release build."
+            exit 0
+          fi
           mkdir -p sign
           printf '%s\\n' "$VELA_PRIVATE_KEY" > sign/private.pem
           printf '%s\\n' "$VELA_CERTIFICATE" > sign/certificate.pem
@@ -85,21 +90,22 @@ jobs:
           KEY_HASH="$(openssl pkey -in sign/private.pem -pubout -outform DER | sha256sum | cut -d' ' -f1)"
           CERT_HASH="$(openssl x509 -in sign/certificate.pem -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum | cut -d' ' -f1)"
           test "$KEY_HASH" = "$CERT_HASH"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Build Xiaomi Vela release RPK
-        if: ${{ secrets.VELA_PRIVATE_KEY != '' && secrets.VELA_CERTIFICATE != '' }}
+        if: steps.signing.outputs.ready == 'true'
         working-directory: watch
         run: npm run release
 
       - name: Verify release RPK
-        if: ${{ secrets.VELA_PRIVATE_KEY != '' && secrets.VELA_CERTIFICATE != '' }}
+        if: steps.signing.outputs.ready == 'true'
         working-directory: watch
         run: |
           find dist -type f -name '*.release.rpk' -print
           test -n "$(find dist -type f -name '*.release.rpk' -print -quit)"
 
       - name: Upload Xiaomi Watch release RPK
-        if: ${{ secrets.VELA_PRIVATE_KEY != '' && secrets.VELA_CERTIFICATE != '' }}
+        if: steps.signing.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-Release-RPK
