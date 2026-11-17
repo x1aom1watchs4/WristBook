@@ -16,29 +16,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Скачать исходный код
+      - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Установить JDK 17
+      - name: Setup Java 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Настроить Gradle
+      - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
 
-      - name: Проверить файлы проекта
+      - name: Check Android project
         run: |
-          ls -la
-          test -f ./gradlew
+          test -f settings.gradle.kts
+          test -f phone/build.gradle.kts
 
-      - name: Собрать APK
-        run: |
-          chmod +x ./gradlew
-          ./gradlew :phone:assembleDebug --stacktrace
+      - name: Build APK
+        run: gradle :phone:assembleDebug --stacktrace
 
-      - name: Загрузить APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Android-APK
@@ -50,36 +50,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Скачать исходный код
+      - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Установить Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '24'
 
-      - name: Проверить проект часов
-        working-directory: watch
-        run: |
-          ls -la
-          test -f package.json
+      - name: Install AIoT Toolkit
+        run: npm install -g aiot-toolkit
 
-      - name: Установить зависимости
+      - name: Install watch dependencies
         working-directory: watch
-        run: npm ci
+        run: npm install
 
-      - name: Собрать Xiaomi Vela
+      - name: Build Xiaomi Vela
         working-directory: watch
-        run: |
-          npx aiot build
+        run: aiot build
 
-      - name: Проверить RPK
+      - name: Check RPK
         working-directory: watch
         run: |
           find dist -type f -name "*.rpk"
           test -n "$(find dist -type f -name '*.rpk' -print -quit)"
 
-      - name: Загрузить RPK
+      - name: Upload Xiaomi Watch RPK
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-RPK
