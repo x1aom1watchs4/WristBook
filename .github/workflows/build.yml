@@ -113,7 +113,7 @@ jobs:
           if-no-files-found: error
 
       - name: Explain missing release signing secrets
-        if: ${{ secrets.VELA_PRIVATE_KEY == '' || secrets.VELA_CERTIFICATE == '' }}
+        if: steps.signing.outputs.ready != 'true'
         run: |
           echo 'Release RPK was not built: configure repository Actions secrets VELA_PRIVATE_KEY and VELA_CERTIFICATE.'
           echo 'The debug RPK was built and uploaded separately.'
