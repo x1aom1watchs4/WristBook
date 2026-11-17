@@ -11,8 +11,26 @@ android {
         applicationId = "com.wristbook"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+    }
+
+    val sharedKeystore = System.getenv("WRISTBOOK_KEYSTORE")
+    if (sharedKeystore != null) {
+        signingConfigs {
+            create("shared") {
+                storeFile = file(sharedKeystore)
+                storePassword = System.getenv("WRISTBOOK_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("WRISTBOOK_KEY_ALIAS")
+                keyPassword = System.getenv("WRISTBOOK_KEYSTORE_PASSWORD")
+            }
+        }
+        buildTypes {
+            getByName("release") {
+                signingConfig = signingConfigs.getByName("shared")
+                isMinifyEnabled = false
+            }
+        }
     }
 
     compileOptions {
@@ -20,20 +38,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures {
-        compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    buildFeatures { compose = true }
+    composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
+    kotlinOptions { jvmTarget = "17" }
 }
 
 dependencies {
+    implementation(files("libs/xms-wearable-lib_1.4_release.aar"))
     implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.compose.ui:ui")
@@ -41,5 +52,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.5")
     implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
