@@ -1,36 +1,79 @@
-name: Build WristBook
+
+name: Build WristBook APK and RPK
 
 on:
   push:
-    branches: [main, master]
-  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   android:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :phone:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          gradle-version: '8.7'
+          name: WristBook-Android-APK
+          path: phone/build/outputs/apk/debug/*.apk
 
-      - name: Build debug APK
-        run: gradle :phone:assembleDebug
+  vela:
+    name: Build Xiaomi Vela RPK
+    runs-on: ubuntu-latest
 
-      - name: Package watch prototype
-        run: zip -r WristBook-watch-source.zip watch docs/sync-protocol.md
+    defaults:
+      run:
+        working-directory: watch
 
-      - uses: actions/upload-artifact@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: WristBook-build
-          path: |
-            phone/build/outputs/apk/debug/phone-debug.apk
-            WristBook-watch-source.zip
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: watch/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install AIoT Toolkit
+        run: npm install -g aiot-toolkit
+
+      - name: Build Vela RPK
+        run: aiot build
+
+      - name: Check RPK
+        run: |
+          find dist -type f -name "*.rpk"
+          test -n "$(find dist -type f -name '*.rpk' -print -quit)"
+
+      - name: Upload RPK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WristBook-Xiaomi-Vela-RPK
+          path: watch/dist/*.rpk
+          if-no-files-found: error
