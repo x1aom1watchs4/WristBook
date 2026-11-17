@@ -11,33 +11,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
 
-      - name: Show toolchain versions
-        run: |
-          java -version
-          gradle --version
-
-      - name: Build Android APK
-        run: gradle :phone:assembleDebug --stacktrace
+      - name: Build debug APK
+        run: gradle :phone:assembleDebug
 
       - name: Package watch prototype
         run: zip -r WristBook-watch-source.zip watch docs/sync-protocol.md
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: WristBook-build
           path: |
