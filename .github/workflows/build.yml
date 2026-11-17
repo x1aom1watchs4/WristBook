@@ -59,14 +59,14 @@ jobs:
       - name: Verify debug RPK
         working-directory: watch
         run: |
-          find dist -type f -name '*.debug.rpk' -print
-          test -n "$(find dist -type f -name '*.debug.rpk' -print -quit)"
+          find .temp_watch/dist -type f -name '*.debug.rpk' -print
+          test -n "$(find .temp_watch/dist -type f -name '*.debug.rpk' -print -quit)"
 
       - name: Upload Xiaomi Watch debug RPK
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-Debug-RPK
-          path: watch/dist/**/*.debug.rpk
+          path: watch/.temp_watch/dist/**/*.debug.rpk
           if-no-files-found: error
 
       - name: Configure persistent Vela signing certificate
@@ -101,15 +101,15 @@ jobs:
         if: steps.signing.outputs.ready == 'true'
         working-directory: watch
         run: |
-          find dist -type f -name '*.release.rpk' -print
-          test -n "$(find dist -type f -name '*.release.rpk' -print -quit)"
+          find .temp_watch/dist -type f -name '*.release.rpk' -print
+          test -n "$(find .temp_watch/dist -type f -name '*.release.rpk' -print -quit)"
 
       - name: Upload Xiaomi Watch release RPK
         if: steps.signing.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-Release-RPK
-          path: watch/dist/**/*.release.rpk
+          path: watch/.temp_watch/dist/**/*.release.rpk
           if-no-files-found: error
 
       - name: Explain missing release signing secrets
