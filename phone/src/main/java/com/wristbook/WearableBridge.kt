@@ -3,86 +3,125 @@ package com.wristbook
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import java.util.concurrent.atomic.AtomicBoolean
 import com.xiaomi.xms.wearable.Wearable
+import com.xiaomi.xms.wearable.auth.Permission
 import com.xiaomi.xms.wearable.node.Node
 import org.json.JSONObject
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.atomic.AtomicBoolean
 
 class WearableBridge(context: Context) {
     private val appContext = context.applicationContext
     @Volatile private var connectedNode: Node? = null
 
     fun connect(onStatus: (String) -> Unit) {
-        val completed = AtomicBoolean(false)
-        val handler = Handler(Looper.getMainLooper())
-        val timeout = Runnable {
-            if (completed.compareAndSet(false, true)) {
-                onStatus("Проверка часов заняла больше 12 секунд. Проверь Mi Fitness и Bluetooth.")
-            }
+        findNode(onStatus) { node ->
+            authorizeAndOpen(node, onStatus) {}
         }
-        handler.postDelayed(timeout, 12_000)
-
-        Wearable.getNodeApi(appContext).connectedNodes
-            .addOnSuccessListener { nodes ->
-                if (!completed.compareAndSet(false, true)) return@addOnSuccessListener
-                handler.removeCallbacks(timeout)
-                val node = nodes.firstOrNull()
-                if (node == null) {
-                    connectedNode = null
-                    onStatus("Часы не найдены. Проверь Mi Fitness.")
-                } else {
-                    connectedNode = node
-                    onStatus("Часы подключены: ${node.name}")
-                }
-            }
-            .addOnFailureListener { error ->
-                if (!completed.compareAndSet(false, true)) return@addOnFailureListener
-                handler.removeCallbacks(timeout)
-                connectedNode = null
-                onStatus("Ошибка связи: ${error.message ?: "неизвестно"}")
-            }
     }
 
     fun sendBook(name: String, text: String, onStatus: (String) -> Unit) {
-        // Reuse the node discovered when the app opened instead of querying it again.
-        val knownNode = connectedNode
-        if (knownNode != null) {
-            onStatus("Часы подключены: ${knownNode.name}. Отправляем книгу…")
-            transferBook(knownNode, name, text, onStatus)
+        val node = connectedNode
+        if (node != null) {
+            onStatus("Часы подключены: ${node.name}. Отправляем книгу…")
+            transferBook(node, name, text, onStatus)
             return
         }
 
-        onStatus("Проверяем подключение к часам…")
+        onStatus("Ищем часы и настраиваем связь…")
+        findNode(onStatus) { found ->
+            authorizeAndOpen(found, onStatus) {
+                onStatus("Отправляем книгу…")
+                transferBook(found, name, text, onStatus)
+            }
+        }
+    }
+
+    private fun findNode(onStatus: (String) -> Unit, onFound: (Node) -> Unit) {
         val completed = AtomicBoolean(false)
         val handler = Handler(Looper.getMainLooper())
         val timeout = Runnable {
             if (completed.compareAndSet(false, true)) {
-                onStatus("Часы не ответили на проверку за 12 секунд. Проверь Mi Fitness и попробуй ещё раз.")
+                onStatus("Часы не ответили за 12 секунд. Проверь подключение в Notify for Xiaomi.")
             }
         }
         handler.postDelayed(timeout, 12_000)
 
-        Wearable.getNodeApi(appContext).connectedNodes
-            .addOnSuccessListener { nodes ->
-                if (!completed.compareAndSet(false, true)) return@addOnSuccessListener
-                handler.removeCallbacks(timeout)
-                val node = nodes.firstOrNull()
-                if (node == null) {
-                    connectedNode = null
-                    onStatus("Часы не найдены. Открой Mi Fitness и проверь Bluetooth.")
-                } else {
-                    connectedNode = node
-                    onStatus("Часы подключены: ${node.name}. Отправляем книгу…")
-                    transferBook(node, name, text, onStatus)
+        try {
+            Wearable.getNodeApi(appContext).connectedNodes
+                .addOnSuccessListener { nodes ->
+                    if (!completed.compareAndSet(false, true)) return@addOnSuccessListener
+                    handler.removeCallbacks(timeout)
+                    val node = nodes.firstOrNull()
+                    if (node == null) {
+                        connectedNode = null
+                        onStatus("Часы не найдены. Проверь, что они подключены в Notify for Xiaomi.")
+                    } else {
+                        connectedNode = node
+                        onStatus("Нашёл часы: ${node.name}. Проверяю разрешение…")
+                        onFound(node)
+                    }
                 }
-            }
-            .addOnFailureListener { error ->
-                if (!completed.compareAndSet(false, true)) return@addOnFailureListener
+                .addOnFailureListener { error ->
+                    if (!completed.compareAndSet(false, true)) return@addOnFailureListener
+                    handler.removeCallbacks(timeout)
+                    connectedNode = null
+                    onStatus("Не удалось найти часы: ${error.message ?: "неизвестная ошибка"}")
+                }
+        } catch (error: Throwable) {
+            if (completed.compareAndSet(false, true)) {
                 handler.removeCallbacks(timeout)
-                connectedNode = null
-                onStatus("Не удалось проверить подключение: ${error.message ?: "неизвестная ошибка"}")
+                onStatus("Ошибка поиска часов: ${error.message ?: "неизвестная ошибка"}")
             }
+        }
+    }
+
+    private fun authorizeAndOpen(node: Node, onStatus: (String) -> Unit, onReady: () -> Unit) {
+        try {
+            Wearable.getAuthApi(appContext)
+                .checkPermissions(node.id, arrayOf(Permission.DEVICE_MANAGER))
+                .addOnSuccessListener { grants ->
+                    if (grants.any { !it }) {
+                        onStatus("Запрашиваю разрешение на связь с часами…")
+                        try {
+                            Wearable.getAuthApi(appContext)
+                                .requestPermission(node.id, Permission.DEVICE_MANAGER)
+                                .addOnSuccessListener {
+                                    onStatus("Запрос разрешения отправлен. Если Notify покажет запрос — подтверди его.")
+                                    openWatchApp(node, onStatus, onReady)
+                                }
+                                .addOnFailureListener { error ->
+                                    onStatus("Не удалось запросить разрешение: ${error.message ?: "ошибка"}")
+                                }
+                        } catch (error: Throwable) {
+                            onStatus("Ошибка запроса разрешения: ${error.message ?: "ошибка"}")
+                        }
+                    } else {
+                        openWatchApp(node, onStatus, onReady)
+                    }
+                }
+                .addOnFailureListener { error ->
+                    onStatus("Не удалось проверить разрешение часов: ${error.message ?: "ошибка"}")
+                }
+        } catch (error: Throwable) {
+            onStatus("Ошибка проверки разрешения: ${error.message ?: "ошибка"}")
+        }
+    }
+
+    private fun openWatchApp(node: Node, onStatus: (String) -> Unit, onReady: () -> Unit) {
+        try {
+            Wearable.getNodeApi(appContext)
+                .launchWearApp(node.id, "/pages/index")
+                .addOnSuccessListener {
+                    onStatus("WristBook открыт на часах. Можно передавать книгу.")
+                    onReady()
+                }
+                .addOnFailureListener { error ->
+                    onStatus("Не удалось открыть WristBook на часах: ${error.message ?: "ошибка"}")
+                }
+        } catch (error: Throwable) {
+            onStatus("Ошибка запуска WristBook: ${error.message ?: "ошибка"}")
+        }
     }
 
     private fun transferBook(node: Node, name: String, text: String, onStatus: (String) -> Unit) {
@@ -115,12 +154,16 @@ class WearableBridge(context: Context) {
     }
 
     private fun sendMessage(nodeId: String, payload: String, onStatus: (String) -> Unit, onSuccess: () -> Unit) {
-        Wearable.getMessageApi(appContext)
-            .sendMessage(nodeId, payload.toByteArray(StandardCharsets.UTF_8))
-            .addOnSuccessListener { onSuccess() }
-            .addOnFailureListener { error ->
-                onStatus("Ошибка передачи: ${error.message ?: "неизвестно"}")
-            }
+        try {
+            Wearable.getMessageApi(appContext)
+                .sendMessage(nodeId, payload.toByteArray(StandardCharsets.UTF_8))
+                .addOnSuccessListener { onSuccess() }
+                .addOnFailureListener { error ->
+                    onStatus("Ошибка передачи: ${error.message ?: "неизвестно"}")
+                }
+        } catch (error: Throwable) {
+            onStatus("Ошибка отправки: ${error.message ?: "неизвестно"}")
+        }
     }
 
     private fun splitSafely(value: String, maxChars: Int): List<String> {
