@@ -62,7 +62,7 @@ jobs:
           set -euo pipefail
           echo "Workspace: $GITHUB_WORKSPACE"
           find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.rpk' -print
-          RPK="$(find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.debug.rpk' -print -quit)"
+          RPK="$(find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.debug.*.rpk' -print -quit)"
           test -n "$RPK"
           mkdir -p "$GITHUB_WORKSPACE/watch/artifacts"
           cp "$RPK" "$GITHUB_WORKSPACE/watch/artifacts/"
@@ -71,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-Debug-RPK
-          path: watch/artifacts/*.debug.rpk
+          path: watch/artifacts/*.debug.*.rpk
           if-no-files-found: error
 
       - name: Configure persistent Vela signing certificate
@@ -108,7 +108,7 @@ jobs:
         run: |
           set -euo pipefail
           find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.rpk' -print
-          RPK="$(find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.release.rpk' -print -quit)"
+          RPK="$(find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.release.*.rpk' -print -quit)"
           test -n "$RPK"
           mkdir -p "$GITHUB_WORKSPACE/watch/artifacts"
           cp "$RPK" "$GITHUB_WORKSPACE/watch/artifacts/"
@@ -118,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-Release-RPK
-          path: watch/artifacts/*.release.rpk
+          path: watch/artifacts/*.release.*.rpk
           if-no-files-found: error
 
       - name: Explain missing release signing secrets
