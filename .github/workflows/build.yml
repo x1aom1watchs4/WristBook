@@ -29,14 +29,15 @@ jobs:
         run: |
           test -f settings.gradle.kts
           test -f phone/build.gradle.kts
-      - name: Download Xiaomi XMS Wearable SDK
+      - name: Download Notify-compatible XMS Wearable library
         run: |
           set -euo pipefail
           mkdir -p phone/libs
           curl --fail --location --retry 3 \
-            https://raw.githubusercontent.com/open-vela/packages_apps/dev/wearable/interconnect_image_demo/android_program/libs/xms-wearable-lib_1.4_release.aar \
+            https://www.mibandnotify.com/xiaomi-mi-band/xms/xms-wearable-lib_1.4_release.aar \
             --output phone/libs/xms-wearable-lib_1.4_release.aar
           test -s phone/libs/xms-wearable-lib_1.4_release.aar
+          file phone/libs/xms-wearable-lib_1.4_release.aar
       - name: Prepare shared APK and RPK signing key
         id: shared-signing
         env:
