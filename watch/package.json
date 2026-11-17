@@ -1,9 +1,13 @@
 {
-  "name": "wristbook",
+  "name": "wristbook-watch",
   "version": "0.1.0",
   "private": true,
-  "description": "WristBook — приложение для телефона и часов",
+  "description": "WristBook for Xiaomi Vela",
   "scripts": {
-    "build:watch": "echo \"Настройка сборки Vela SDK ещё не выполнена\""
+    "build": "aiot build",
+    "release": "aiot release"
+  },
+  "devDependencies": {
+    "aiot-toolkit": "2.0.5"
   }
 }
