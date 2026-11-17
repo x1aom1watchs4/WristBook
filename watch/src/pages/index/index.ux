@@ -1,0 +1,39 @@
+<template>
+  <div class="page">
+    <text class="title">WristBook</text>
+    <text class="subtitle">Чтение на часах</text>
+    <text class="hint">Версия 0.1.0</text>
+    <text class="hint">Проект часов успешно запущен</text>
+  </div>
+</template>
+
+<style>
+  .page {
+    width: 466px;
+    height: 466px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #101820;
+  }
+  .title {
+    color: #ffffff;
+    font-size: 38px;
+    font-weight: bold;
+    margin-bottom: 18px;
+  }
+  .subtitle {
+    color: #8ed6c5;
+    font-size: 25px;
+    margin-bottom: 18px;
+  }
+  .hint {
+    color: #c7d0d8;
+    font-size: 17px;
+    margin-top: 8px;
+  }
+</style>
+
+<script>
+  export default {}
+</script>
