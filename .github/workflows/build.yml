@@ -58,6 +58,7 @@ jobs:
           echo "WRISTBOOK_KEYSTORE=$GITHUB_WORKSPACE/signing/shared.p12" >> "$GITHUB_ENV"
           echo "WRISTBOOK_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
           echo "WRISTBOOK_KEY_ALIAS=wristbook" >> "$GITHUB_ENV"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
       - name: Build signed APK with the watch app certificate
         if: steps.shared-signing.outputs.ready == 'true'
         run: gradle :phone:assembleRelease --stacktrace
@@ -68,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Android-APK
-          path: phone/build/outputs/apk/debug/*.apk
+          path: phone/build/outputs/apk/**/*.apk
           if-no-files-found: error
 
   vela:
