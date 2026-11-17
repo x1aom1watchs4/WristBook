@@ -3,7 +3,8 @@ name: Build WristBook APK and RPK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -11,67 +12,74 @@ permissions:
 
 jobs:
   android:
-    name: Build Android APK
+    name: Сборка APK для Android
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Скачать исходный код
+        uses: actions/checkout@v5
 
-      - name: Setup JDK 17
-        uses: actions/setup-java@v4
+      - name: Установить JDK 17
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
+      - name: Настроить Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build APK
+      - name: Проверить файлы проекта
+        run: |
+          ls -la
+          test -f ./gradlew
+
+      - name: Собрать APK
         run: |
           chmod +x ./gradlew
-          ./gradlew :phone:assembleDebug
+          ./gradlew :phone:assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Загрузить APK
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Android-APK
           path: phone/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
 
   vela:
-    name: Build Xiaomi Vela RPK
+    name: Сборка Xiaomi Vela RPK
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: watch
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Скачать исходный код
+        uses: actions/checkout@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Установить Node.js
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: watch/package-lock.json
+          node-version: '24'
 
-      - name: Install dependencies
+      - name: Проверить проект часов
+        working-directory: watch
+        run: |
+          ls -la
+          test -f package.json
+
+      - name: Установить зависимости
+        working-directory: watch
         run: npm ci
 
-      - name: Install AIoT Toolkit
-        run: npm install -g aiot-toolkit
+      - name: Собрать Xiaomi Vela
+        working-directory: watch
+        run: |
+          npx aiot build
 
-      - name: Build Vela RPK
-        run: aiot build
-
-      - name: Check RPK
+      - name: Проверить RPK
+        working-directory: watch
         run: |
           find dist -type f -name "*.rpk"
           test -n "$(find dist -type f -name '*.rpk' -print -quit)"
 
-      - name: Upload RPK
+      - name: Загрузить RPK
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-RPK
