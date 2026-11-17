@@ -56,17 +56,22 @@ jobs:
         working-directory: watch
         run: npm run build
 
-      - name: Verify debug RPK
+      - name: Verify and stage debug RPK
         working-directory: watch
         run: |
-          find ../.temp_watch/dist -type f -name '*.debug.rpk' -print
-          test -n "$(find ../.temp_watch/dist -type f -name '*.debug.rpk' -print -quit)"
+          set -euo pipefail
+          echo "Workspace: $GITHUB_WORKSPACE"
+          find "$GITHUB_WORKSPACE" -type f -name '*.rpk' -print
+          RPK="$(find "$GITHUB_WORKSPACE" -type f -name '*.debug.rpk' -print -quit)"
+          test -n "$RPK"
+          mkdir -p "$GITHUB_WORKSPACE/watch/artifacts"
+          cp "$RPK" "$GITHUB_WORKSPACE/watch/artifacts/"
 
       - name: Upload Xiaomi Watch debug RPK
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-Debug-RPK
-          path: .temp_watch/dist/**/*.debug.rpk
+          path: watch/artifacts/*.debug.rpk
           if-no-files-found: error
 
       - name: Configure persistent Vela signing certificate
@@ -97,19 +102,23 @@ jobs:
         working-directory: watch
         run: npm run release
 
-      - name: Verify release RPK
+      - name: Verify and stage release RPK
         if: steps.signing.outputs.ready == 'true'
         working-directory: watch
         run: |
-          find ../.temp_watch/dist -type f -name '*.release.rpk' -print
-          test -n "$(find ../.temp_watch/dist -type f -name '*.release.rpk' -print -quit)"
+          set -euo pipefail
+          find "$GITHUB_WORKSPACE" -type f -name '*.rpk' -print
+          RPK="$(find "$GITHUB_WORKSPACE" -type f -name '*.release.rpk' -print -quit)"
+          test -n "$RPK"
+          mkdir -p "$GITHUB_WORKSPACE/watch/artifacts"
+          cp "$RPK" "$GITHUB_WORKSPACE/watch/artifacts/"
 
       - name: Upload Xiaomi Watch release RPK
         if: steps.signing.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: WristBook-Xiaomi-Vela-Release-RPK
-          path: .temp_watch/dist/**/*.release.rpk
+          path: watch/artifacts/*.release.rpk
           if-no-files-found: error
 
       - name: Explain missing release signing secrets
