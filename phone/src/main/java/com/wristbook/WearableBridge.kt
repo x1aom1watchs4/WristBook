@@ -29,12 +29,28 @@ class WearableBridge(context: Context) {
     }
 
     fun sendBook(name: String, text: String, onStatus: (String) -> Unit) {
-        val node = connectedNode
-        if (node == null) {
-            onStatus("Сначала подключи часы")
-            connect { onStatus(it) }
-            return
-        }
+        // Always refresh the node list at send time. The startup lookup may still be
+        // running, or its cached node may have gone stale while the app was open.
+        onStatus("Проверяем подключение к часам…")
+        Wearable.getNodeApi(appContext).connectedNodes
+            .addOnSuccessListener { nodes ->
+                val node = nodes.firstOrNull()
+                if (node == null) {
+                    connectedNode = null
+                    onStatus("Часы не найдены. Открой Mi Fitness и проверь Bluetooth.")
+                } else {
+                    connectedNode = node
+                    onStatus("Часы подключены: ${node.name}. Отправляем книгу…")
+                    transferBook(node, name, text, onStatus)
+                }
+            }
+            .addOnFailureListener { error ->
+                connectedNode = null
+                onStatus("Не удалось проверить подключение: ${error.message ?: "неизвестная ошибка"}")
+            }
+    }
+
+    private fun transferBook(node: Node, name: String, text: String, onStatus: (String) -> Unit) {
         val chunks = splitSafely(text, 1400)
         sendMessage(node.id, JSONObject()
             .put("type", "book_start")
