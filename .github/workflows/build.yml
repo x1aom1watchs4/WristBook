@@ -29,12 +29,12 @@ jobs:
         run: |
           test -f settings.gradle.kts
           test -f phone/build.gradle.kts
-      - name: Download Notify-compatible XMS Wearable library
+      - name: Restore original Xiaomi XMS Wearable SDK
         run: |
           set -euo pipefail
           mkdir -p phone/libs
           curl --fail --location --retry 3 \
-            https://www.mibandnotify.com/xiaomi-mi-band/xms/xms-wearable-lib_1.4_release.aar \
+            https://raw.githubusercontent.com/open-vela/packages_apps/dev/wearable/interconnect_image_demo/android_program/libs/xms-wearable-lib_1.4_release.aar \
             --output phone/libs/xms-wearable-lib_1.4_release.aar
           test -s phone/libs/xms-wearable-lib_1.4_release.aar
           file phone/libs/xms-wearable-lib_1.4_release.aar
