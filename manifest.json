@@ -1,0 +1,7 @@
+{
+  "package": "com.wristbook.watch",
+  "name": "WristBook",
+  "versionName": "0.1.0",
+  "versionCode": 1,
+  "minPlatformVersion": 1000
+}

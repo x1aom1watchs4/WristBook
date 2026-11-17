@@ -1,0 +1,9 @@
+{
+  "name": "wristbook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WristBook — приложение для телефона и часов",
+  "scripts": {
+    "build:watch": "echo \"Настройка сборки Vela SDK ещё не выполнена\""
+  }
+}
