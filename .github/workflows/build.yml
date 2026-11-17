@@ -61,8 +61,8 @@ jobs:
         run: |
           set -euo pipefail
           echo "Workspace: $GITHUB_WORKSPACE"
-          find "$GITHUB_WORKSPACE" -type f -name '*.rpk' -print
-          RPK="$(find "$GITHUB_WORKSPACE" -type f -name '*.debug.rpk' -print -quit)"
+          find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.rpk' -print
+          RPK="$(find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.debug.rpk' -print -quit)"
           test -n "$RPK"
           mkdir -p "$GITHUB_WORKSPACE/watch/artifacts"
           cp "$RPK" "$GITHUB_WORKSPACE/watch/artifacts/"
@@ -107,8 +107,8 @@ jobs:
         working-directory: watch
         run: |
           set -euo pipefail
-          find "$GITHUB_WORKSPACE" -type f -name '*.rpk' -print
-          RPK="$(find "$GITHUB_WORKSPACE" -type f -name '*.release.rpk' -print -quit)"
+          find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.rpk' -print
+          RPK="$(find "$GITHUB_WORKSPACE/watch/dist" -type f -name '*.release.rpk' -print -quit)"
           test -n "$RPK"
           mkdir -p "$GITHUB_WORKSPACE/watch/artifacts"
           cp "$RPK" "$GITHUB_WORKSPACE/watch/artifacts/"
